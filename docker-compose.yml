@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: citylife-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - citylife_pgdata:/var/lib/postgresql
+      - D:/CITY_LIFE/Database/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - citylife-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: citylife-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    networks:
+      - citylife-net
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: citylife-https-tunnel
+    restart: unless-stopped
+    depends_on:
+      - backend
+    command: tunnel --no-autoupdate --url http://backend:8080
+    networks:
+      - citylife-net
+volumes:
+  citylife_pgdata:
+
+networks:
+  citylife-net:
+    driver: bridge

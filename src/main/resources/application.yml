@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: city-life-backend
+
+  config:
+    import: optional:classpath:application-secrets.yml
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/city_life_abidjan
+    username: citylife_app
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  jwt:
+    expiration-ms: 900000          # 15 minutes pour l'Access Token
+    refresh-expiration-ms: 604800000 # 7 jours pour le Refresh Token
