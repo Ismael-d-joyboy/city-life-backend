@@ -35,6 +35,17 @@ public class Player {
     @Builder.Default
     private Long experiencePoints = 0L;
 
+    @Column(name = "tutorial_completed", nullable = false)
+    @Builder.Default
+    private boolean tutorialCompleted = false;
+
+    @Column(name = "tutorial_step", nullable = false)
+    @Builder.Default
+    private Integer tutorialStep = 0;
+
+    @Column(name = "tutorial_completed_at")
+    private Instant tutorialCompletedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -46,6 +57,9 @@ public class Player {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.tutorialStep == null) {
+            this.tutorialStep = 0;
+        }
     }
 
     @PreUpdate
