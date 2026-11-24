@@ -86,6 +86,18 @@ public class Character {
     @Builder.Default
     private Integer hospitalVisits = 0;
 
+    @Column(name = "has_weapon_license", nullable = false)
+    @Builder.Default
+    private boolean hasWeaponLicense = false;
+
+    @Column(name = "wanted_level", nullable = false)
+    @Builder.Default
+    private Integer wantedLevel = 0;
+
+    @Column(name = "total_fines_paid", nullable = false)
+    @Builder.Default
+    private Long totalFinesPaid = 0L;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

@@ -6,6 +6,7 @@ import ci.abidjan.citylife.economy.Transaction;
 import ci.abidjan.citylife.economy.TransactionRepository;
 import ci.abidjan.citylife.economy.Wallet;
 import ci.abidjan.citylife.economy.WalletRepository;
+import ci.abidjan.citylife.factions.FactionMemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class CharacterService {
     private final CharacterAppearanceRepository appearanceRepository;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
+    private final FactionMemberRepository factionMemberRepository;
 
     @Transactional
     public CharacterResponse createCharacter(String email, CreateCharacterRequest request) {
@@ -76,7 +78,10 @@ public class CharacterService {
                             .orElseThrow(() -> new IllegalStateException("Apparence introuvable."));
                     Wallet w = walletRepository.findByCharacterId(c.getId())
                             .orElseThrow(() -> new IllegalStateException("Portefeuille introuvable."));
-                    return CharacterResponse.from(c, a, w);
+                    String factionTag = factionMemberRepository.findByCharacterId(c.getId())
+                            .map(m -> m.getFaction().getTag())
+                            .orElse("");
+                    return CharacterResponse.from(c, a, w, factionTag);
                 })
                 .toList();
     }

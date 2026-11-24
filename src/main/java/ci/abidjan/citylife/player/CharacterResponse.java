@@ -25,9 +25,15 @@ public record CharacterResponse(
         String skinTone,
         String hairStyle,
         String hairColor,
-        Map<String, Object> outfitData
+        Map<String, Object> outfitData,
+        boolean hasWeaponLicense,
+        String factionTag
 ) {
     public static CharacterResponse from(Character c, CharacterAppearance a, Wallet w) {
+        return from(c, a, w, "");
+    }
+
+    public static CharacterResponse from(Character c, CharacterAppearance a, Wallet w, String factionTag) {
         return new CharacterResponse(
                 c.getId(),
                 c.getFirstName(),
@@ -48,7 +54,9 @@ public record CharacterResponse(
                 a.getSkinTone(),
                 a.getHairStyle(),
                 a.getHairColor(),
-                a.getOutfitData()
+                a.getOutfitData(),
+                c.isHasWeaponLicense(),
+                factionTag != null ? factionTag : ""
         );
     }
 }
