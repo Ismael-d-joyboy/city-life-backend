@@ -35,4 +35,12 @@ public class InventoryController {
             @Valid @RequestBody BuyItemRequest request) {
         return ResponseEntity.ok(inventoryService.buyItem(authentication.getName(), characterId, request));
     }
+
+    @PostMapping("/{characterId}/consume")
+    public ResponseEntity<ConsumeItemResponse> consumeItem(
+            Authentication authentication,
+            @PathVariable UUID characterId,
+            @Valid @RequestBody ConsumeItemRequest request) {
+        return ResponseEntity.ok(inventoryService.consumeItem(authentication.getName(), characterId, request));
+    }
 }

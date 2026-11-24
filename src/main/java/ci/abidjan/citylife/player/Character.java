@@ -82,6 +82,10 @@ public class Character {
     @Builder.Default
     private boolean active = true;
 
+    @Column(name = "hospital_visits", nullable = false)
+    @Builder.Default
+    private Integer hospitalVisits = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

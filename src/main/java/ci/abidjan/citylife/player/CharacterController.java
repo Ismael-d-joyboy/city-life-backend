@@ -37,4 +37,20 @@ public class CharacterController {
             @Valid @RequestBody SaveCharacterStateRequest request) {
         return ResponseEntity.ok(characterService.saveState(authentication.getName(), characterId, request));
     }
+
+    @PutMapping("/{characterId}/appearance")
+    public ResponseEntity<CharacterResponse> updateAppearance(
+            Authentication authentication,
+            @PathVariable UUID characterId,
+            @Valid @RequestBody UpdateAppearanceRequest request) {
+        return ResponseEntity.ok(characterService.updateAppearance(authentication.getName(), characterId, request));
+    }
+
+    @PostMapping("/{characterId}/hospital-care")
+    public ResponseEntity<HospitalCareResponse> hospitalCare(
+            Authentication authentication,
+            @PathVariable UUID characterId,
+            @Valid @RequestBody HospitalCareRequest request) {
+        return ResponseEntity.ok(characterService.hospitalCare(authentication.getName(), characterId, request));
+    }
 }
