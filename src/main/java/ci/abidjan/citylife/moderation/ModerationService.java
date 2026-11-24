@@ -46,7 +46,11 @@ public class ModerationService {
         auditService.log(account, "PLAYER_REPORT_SUBMITTED", SecurityAuditLog.Severity.INFO, ipAddress,
                 Map.of("reportId", report.getId().toString(), "target", report.getTargetUsername(), "reason", report.getReasonCode().name()));
 
-        return ReportResponse.from(report,
+        UUID targetId = playerRepository.findByUsernameIgnoreCase(report.getTargetUsername())
+                .map(Player::getId)
+                .orElse(null);
+
+        return ReportResponse.from(report, targetId,
                 "Signalement transmis à la modération (" + report.getReasonCode().name() + "). Merci !");
     }
 
@@ -55,7 +59,14 @@ public class ModerationService {
         List<PlayerReport> list = (statusFilter != null)
                 ? reportRepository.findByStatusOrderByCreatedAtDesc(statusFilter)
                 : reportRepository.findAllByOrderByCreatedAtDesc();
-        return list.stream().map(r -> ReportResponse.from(r, "")).toList();
+        return list.stream()
+                .map(r -> {
+                    UUID targetId = playerRepository.findByUsernameIgnoreCase(r.getTargetUsername())
+                            .map(Player::getId)
+                            .orElse(null);
+                    return ReportResponse.from(r, targetId, "");
+                })
+                .toList();
     }
 
     @Transactional

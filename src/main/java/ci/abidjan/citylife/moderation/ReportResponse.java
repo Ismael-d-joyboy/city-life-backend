@@ -6,6 +6,7 @@ import java.util.UUID;
 public record ReportResponse(
         UUID id,
         String reporterUsername,
+        UUID targetPlayerId,
         String targetUsername,
         PlayerReport.ReasonCode reasonCode,
         String messageExcerpt,
@@ -16,9 +17,14 @@ public record ReportResponse(
         String message
 ) {
     public static ReportResponse from(PlayerReport r, String msg) {
+        return from(r, null, msg);
+    }
+
+    public static ReportResponse from(PlayerReport r, UUID targetPlayerId, String msg) {
         return new ReportResponse(
                 r.getId(),
                 r.getReporter() != null ? r.getReporter().getUsername() : "",
+                targetPlayerId,
                 r.getTargetUsername(),
                 r.getReasonCode(),
                 r.getMessageExcerpt(),

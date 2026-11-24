@@ -141,6 +141,12 @@ class Phase16CJobsFuelModerationTest {
         assertNotNull(resolved.resolvedAt());
 
         Player target = Player.builder().id(UUID.randomUUID()).username("Troll99").build();
+        when(playerRepository.findByUsernameIgnoreCase("Troll99")).thenReturn(Optional.of(target));
+        when(reportRepository.findByStatusOrderByCreatedAtDesc(PlayerReport.Status.OPEN)).thenReturn(List.of(stored));
+        List<ReportResponse> openList = moderationService.listReports(PlayerReport.Status.OPEN);
+        assertEquals(1, openList.size());
+        assertEquals(target.getId(), openList.get(0).targetPlayerId());
+
         when(playerRepository.findById(target.getId())).thenReturn(Optional.of(target));
         Map<String, Object> muteRes = moderationService.mutePlayer(
                 email,
