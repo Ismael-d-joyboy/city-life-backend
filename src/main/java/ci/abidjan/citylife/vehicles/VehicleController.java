@@ -37,4 +37,21 @@ public class VehicleController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(vehicleService.buyVehicle(authentication.getName(), characterId, request));
     }
+
+    @PostMapping("/{characterId}/refuel")
+    public ResponseEntity<RefuelResponse> refuelVehicle(
+            Authentication authentication,
+            @PathVariable UUID characterId,
+            @Valid @RequestBody RefuelRequest request) {
+        return ResponseEntity.ok(vehicleService.refuelVehicle(authentication.getName(), characterId, request));
+    }
+
+    @PutMapping("/{characterId}/{vehicleId}/customize")
+    public ResponseEntity<PlayerVehicleResponse> customizeVehicle(
+            Authentication authentication,
+            @PathVariable UUID characterId,
+            @PathVariable UUID vehicleId,
+            @Valid @RequestBody CustomizeVehicleRequest request) {
+        return ResponseEntity.ok(vehicleService.customizeVehicle(authentication.getName(), characterId, vehicleId, request));
+    }
 }

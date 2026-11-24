@@ -20,7 +20,9 @@ public record JobPayoutRequest(
     public enum JobActionType {
         TAXI_RIDE(2500L, 25L, "Course Taxi Compteur terminée"),
         MANAWA_BAG(1500L, 15L, "Livraison sac de ciment (Manawa)"),
-        MANAWA_BONUS_5(2500L, 30L, "Bonus chef de chantier (5 sacs Manawa)");
+        MANAWA_BONUS_5(2500L, 30L, "Bonus chef de chantier (5 sacs Manawa)"),
+        DELIVERY_DROP(3000L, 30L, "Livraison Express Abidjan terminée"),
+        GBAKA_STOP(2000L, 20L, "Arrêt ligne Gbaka / Woro-woro desservi");
 
         public final long rewardCash;
         public final long rewardXp;

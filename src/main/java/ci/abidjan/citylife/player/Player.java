@@ -46,6 +46,12 @@ public class Player {
     @Column(name = "tutorial_completed_at")
     private Instant tutorialCompletedAt;
 
+    @Column(name = "muted_until")
+    private Instant mutedUntil;
+
+    @Column(name = "mute_reason", length = 255)
+    private String muteReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

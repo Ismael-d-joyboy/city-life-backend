@@ -94,6 +94,80 @@ public class VehicleService {
         return PlayerVehicleResponse.from(playerVehicle);
     }
 
+    @Transactional
+    public RefuelResponse refuelVehicle(String email, UUID characterId, RefuelRequest request) {
+        Character character = getOwnedCharacter(email, characterId);
+        Wallet wallet = walletRepository.findByCharacterId(character.getId())
+                .orElseThrow(() -> new IllegalStateException("Portefeuille introuvable."));
+
+        int currentFuel = Math.max(0, Math.min(100, request.currentFuelPercent()));
+        int missing = 100 - currentFuel;
+        if (missing <= 1) {
+            return new RefuelResponse(100, 0L, wallet.getCashBalance(), wallet.getBankBalance(),
+                    "Réservoir déjà plein à 100 % !");
+        }
+
+        // Tarif IVOIRE OIL : 30 FCFA / % (plafonné à 3 000 FCFA le plein complet)
+        long cost = Math.max(300L, Math.min(3000L, missing * 30L));
+        long charged = 0L;
+
+        if (!transactionRepository.existsByIdempotencyKey(request.idempotencyKey())) {
+            if (wallet.isFrozen()) {
+                throw new IllegalStateException("Portefeuille gelé.");
+            }
+            if (wallet.getCashBalance() < cost) {
+                throw new IllegalStateException("Cash insuffisant (" + cost + " FCFA requis chez IVOIRE OIL).");
+            }
+
+            charged = cost;
+            wallet.setCashBalance(wallet.getCashBalance() - charged);
+            walletRepository.save(wallet);
+
+            transactionRepository.save(Transaction.builder()
+                    .idempotencyKey(request.idempotencyKey())
+                    .sourceWallet(wallet)
+                    .amount(charged)
+                    .transactionType(Transaction.Type.PURCHASE)
+                    .status(Transaction.Status.COMPLETED)
+                    .description("Station IVOIRE OIL : plein de carburant (" + missing + " %)")
+                    .metadata(Map.of("service", "IVOIRE_OIL_REFUEL", "missingPercent", missing))
+                    .build());
+
+            if (request.playerVehicleId() != null) {
+                playerVehicleRepository.findByIdAndCharacterId(request.playerVehicleId(), character.getId())
+                        .ifPresent(pv -> {
+                            pv.setFuelLevel(100);
+                            playerVehicleRepository.save(pv);
+                        });
+            } else {
+                List<PlayerVehicle> owned = playerVehicleRepository.findByCharacterId(character.getId());
+                if (!owned.isEmpty()) {
+                    PlayerVehicle pv = owned.get(0);
+                    pv.setFuelLevel(100);
+                    playerVehicleRepository.save(pv);
+                }
+            }
+        }
+
+        return new RefuelResponse(
+                100,
+                charged,
+                wallet.getCashBalance(),
+                wallet.getBankBalance(),
+                "Plein IVOIRE OIL effectué (" + charged + " FCFA) — Réservoir à 100 % !"
+        );
+    }
+
+    @Transactional
+    public PlayerVehicleResponse customizeVehicle(String email, UUID characterId, UUID vehicleId, CustomizeVehicleRequest request) {
+        Character character = getOwnedCharacter(email, characterId);
+        PlayerVehicle pv = playerVehicleRepository.findByIdAndCharacterId(vehicleId, character.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Véhicule introuvable dans votre garage."));
+        pv.setColorHex(request.colorHex().trim().toUpperCase());
+        pv = playerVehicleRepository.save(pv);
+        return PlayerVehicleResponse.from(pv);
+    }
+
     private String generateIvorianPlate() {
         String plate;
         do {
