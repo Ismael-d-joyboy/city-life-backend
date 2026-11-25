@@ -22,7 +22,9 @@ public record JobPayoutRequest(
         MANAWA_BAG(1500L, 15L, "Livraison sac de ciment (Manawa)"),
         MANAWA_BONUS_5(2500L, 30L, "Bonus chef de chantier (5 sacs Manawa)"),
         DELIVERY_DROP(3000L, 30L, "Livraison Express Abidjan terminée"),
-        GBAKA_STOP(2000L, 20L, "Arrêt ligne Gbaka / Woro-woro desservi");
+        GBAKA_STOP(2000L, 20L, "Arrêt ligne Gbaka / Woro-woro desservi"),
+        GBAKA_TOUR_BONUS(3500L, 30L, "Pourboire tournée Gbaka sans accident"),
+        CONTRABAND_DELIVERY(6500L, 50L, "Livraison colis non déclaré (Port de Vridi)");
 
         public final long rewardCash;
         public final long rewardXp;

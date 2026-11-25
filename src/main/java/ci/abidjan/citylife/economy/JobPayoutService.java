@@ -20,6 +20,7 @@ import java.util.Map;
 public class JobPayoutService {
 
     private static final long COOLDOWN_SECONDS = 8L;
+    private static final long CONTRABAND_COOLDOWN_SECONDS = 90L;
     private static final int MANAWA_BAGS_FOR_BONUS = 5;
 
     private final AccountRepository accountRepository;
@@ -48,7 +49,19 @@ public class JobPayoutService {
 
         // Anti-triche persisté en base (Jalon 0) :
         // 1. MANAWA_BONUS_5 exige 5 sacs réellement livrés et validés côté serveur
-        if (action == JobPayoutRequest.JobActionType.MANAWA_BONUS_5) {
+        if (action == JobPayoutRequest.JobActionType.CONTRABAND_DELIVERY) {
+            if (player.isPeacefulMode()) {
+                throw new IllegalStateException("Mode Pacifique actif : les livraisons à risque sont désactivées.");
+            }
+            Instant lastContraband = character.getLastContrabandPayoutAt();
+            if (lastContraband != null && now.isBefore(lastContraband.plusSeconds(CONTRABAND_COOLDOWN_SECONDS))) {
+                auditService.log(account, "CONTRABAND_COOLDOWN_TRIGGERED", SecurityAuditLog.Severity.WARNING, ipAddress,
+                        Map.of("characterId", character.getId().toString()));
+                throw new IllegalStateException("Livraison à risque trop rapide. Patientez 90 secondes entre deux trajets.");
+            }
+            character.setLastContrabandPayoutAt(now);
+            character.setLastJobPayoutAt(now);
+        } else if (action == JobPayoutRequest.JobActionType.MANAWA_BONUS_5) {
             if (currentStreak < MANAWA_BAGS_FOR_BONUS) {
                 auditService.log(account, "MANAWA_BONUS_EXPLOIT_BLOCKED", SecurityAuditLog.Severity.WARNING, ipAddress,
                         Map.of("characterId", character.getId().toString(), "streak", currentStreak));
@@ -68,6 +81,7 @@ public class JobPayoutService {
                 character.setManawaBagStreak(Math.min(20, currentStreak + 1));
             }
         }
+        player.setLastSeenAt(now);
         characterRepository.save(character);
 
         Wallet wallet = walletRepository.findByCharacterId(character.getId())

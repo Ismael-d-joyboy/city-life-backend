@@ -105,6 +105,9 @@ public class Character {
     @Column(name = "last_job_payout_at")
     private Instant lastJobPayoutAt;
 
+    @Column(name = "last_contraband_payout_at")
+    private Instant lastContrabandPayoutAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

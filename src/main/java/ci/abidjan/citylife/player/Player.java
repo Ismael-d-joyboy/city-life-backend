@@ -56,6 +56,9 @@ public class Player {
     @Builder.Default
     private boolean peacefulMode = false;
 
+    @Column(name = "last_seen_at")
+    private Instant lastSeenAt;
+
     /**
      * Recalcule le niveau joueur à partir de l'XP accumulé (palier progressif : 1 + floor(sqrt(xp / 100))).
      */

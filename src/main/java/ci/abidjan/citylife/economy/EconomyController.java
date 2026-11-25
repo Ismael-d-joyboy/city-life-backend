@@ -1,5 +1,6 @@
 package ci.abidjan.citylife.economy;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,22 @@ public class EconomyController {
             Authentication authentication,
             @Valid @RequestBody BankOperationRequest request) {
         return ResponseEntity.ok(economyService.withdraw(authentication.getName(), request));
+    }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<TransferResponse> transfer(
+            Authentication authentication,
+            @Valid @RequestBody TransferRequest request,
+            HttpServletRequest httpRequest) {
+        String ip = httpRequest != null ? httpRequest.getRemoteAddr() : "unknown";
+        return ResponseEntity.ok(economyService.transfer(authentication.getName(), request, ip));
+    }
+
+    @GetMapping("/transfers/{characterId}")
+    public ResponseEntity<List<TransactionResponse>> getTransfers(
+            Authentication authentication,
+            @PathVariable UUID characterId) {
+        return ResponseEntity.ok(economyService.getTransferHistory(authentication.getName(), characterId));
     }
 
     @GetMapping("/transactions/{characterId}")

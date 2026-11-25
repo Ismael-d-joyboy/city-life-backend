@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
     boolean existsByIdempotencyKey(String idempotencyKey);
     List<Transaction> findTop20BySourceWalletIdOrTargetWalletIdOrderByCreatedAtDesc(UUID sourceWalletId, UUID targetWalletId);
+    List<Transaction> findTop20ByTransactionTypeAndSourceWalletIdOrTransactionTypeAndTargetWalletIdOrderByCreatedAtDesc(
+            Transaction.Type type1, UUID sourceWalletId, Transaction.Type type2, UUID targetWalletId);
 }
