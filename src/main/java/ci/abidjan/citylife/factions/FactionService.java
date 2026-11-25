@@ -168,15 +168,41 @@ public class FactionService {
         FactionTerritory territory = territoryRepository.findById(zoneCode.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Zone de territoire introuvable : " + zoneCode));
 
+        // Anti-triche Jalon 0 : cooldown 5 min entre deux captures d'un même territoire
+        Instant now = Instant.now();
+        if (territory.getCapturedAt() != null && now.isBefore(territory.getCapturedAt().plusSeconds(300L))) {
+            throw new IllegalStateException("Ce territoire est verrouillé quelques minutes après sa dernière capture.");
+        }
+
+        // Vérification de proximité si le personnage dispose d'une position sauvegardée hors origine (0,0)
+        double px = character.getPosX() != null ? character.getPosX() : 0.0;
+        double pz = character.getPosZ() != null ? character.getPosZ() : 0.0;
+        if (Math.abs(px) > 0.01 || Math.abs(pz) > 0.01) {
+            double[] zoneCenter = resolveZoneCenter(territory.getZoneCode());
+            if (zoneCenter != null) {
+                double dx = px - zoneCenter[0];
+                double dz = pz - zoneCenter[1];
+                if ((dx * dx + dz * dz) > (65.0 * 65.0)) {
+                    throw new IllegalStateException("Vous devez être physiquement dans la zone pour capturer ce territoire.");
+                }
+            }
+        }
+
         Faction faction = membership.getFaction();
         territory.setOwnerFaction(faction);
-        territory.setCapturedAt(Instant.now());
+        territory.setCapturedAt(now);
         territory = territoryRepository.save(territory);
 
         return FactionResponse.TerritoryResponse.from(
                 territory,
                 "Territoire « " + territory.getZoneName() + " » contrôlé par [" + faction.getTag() + "] !"
         );
+    }
+
+    private static double[] resolveZoneCenter(String zoneCode) {
+        if ("ZONE_PORT_VRIDI".equalsIgnoreCase(zoneCode)) return new double[]{-96.0, -310.0};
+        if ("ZONE_INDUS_YOPOUGON".equalsIgnoreCase(zoneCode)) return new double[]{-265.0, -45.0};
+        return null;
     }
 
     private Character getOwnedCharacter(String email, UUID characterId) {

@@ -218,20 +218,36 @@ public class ArmoryService {
         long paid = 0L;
 
         if (!transactionRepository.existsByIdempotencyKey(request.idempotencyKey())) {
-            if (!wallet.isFrozen() && wallet.getCashBalance() > 0) {
-                paid = Math.min(wallet.getCashBalance(), expectedFine);
-                wallet.setCashBalance(wallet.getCashBalance() - paid);
-                walletRepository.save(wallet);
+            if (!wallet.isFrozen()) {
+                // Prélèvement sur Cash en priorité, puis complément automatique sur Banque (bloque l'exploit cash=0)
+                long cashAvail = Math.max(0L, wallet.getCashBalance());
+                long paidCash = Math.min(cashAvail, expectedFine);
+                long remaining = expectedFine - paidCash;
+                long bankAvail = Math.max(0L, wallet.getBankBalance());
+                long paidBank = Math.min(bankAvail, remaining);
+                paid = paidCash + paidBank;
 
-                transactionRepository.save(Transaction.builder()
-                        .idempotencyKey(request.idempotencyKey())
-                        .sourceWallet(wallet)
-                        .amount(paid)
-                        .transactionType(Transaction.Type.FINE)
-                        .status(Transaction.Status.COMPLETED)
-                        .description("Contravention Police Nationale (" + stars + " étoile(s)) : " + request.reason())
-                        .metadata(Map.of("wantedStars", stars, "reason", request.reason(), "custody", request.shortCustody()))
-                        .build());
+                if (paid > 0) {
+                    wallet.setCashBalance(wallet.getCashBalance() - paidCash);
+                    wallet.setBankBalance(wallet.getBankBalance() - paidBank);
+                    walletRepository.save(wallet);
+
+                    transactionRepository.save(Transaction.builder()
+                            .idempotencyKey(request.idempotencyKey())
+                            .sourceWallet(wallet)
+                            .amount(paid)
+                            .transactionType(Transaction.Type.FINE)
+                            .status(Transaction.Status.COMPLETED)
+                            .description("Contravention Police Nationale (" + stars + " étoile(s)) : " + request.reason())
+                            .metadata(Map.of(
+                                    "wantedStars", stars,
+                                    "reason", request.reason(),
+                                    "custody", request.shortCustody(),
+                                    "paidCash", paidCash,
+                                    "paidBank", paidBank
+                            ))
+                            .build());
+                }
             }
 
             character.setWantedLevel(0);

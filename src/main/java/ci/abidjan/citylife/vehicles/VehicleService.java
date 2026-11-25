@@ -100,8 +100,23 @@ public class VehicleService {
         Wallet wallet = walletRepository.findByCharacterId(character.getId())
                 .orElseThrow(() -> new IllegalStateException("Portefeuille introuvable."));
 
-        int currentFuel = Math.max(0, Math.min(100, request.currentFuelPercent()));
-        int missing = 100 - currentFuel;
+        PlayerVehicle targetVehicle = null;
+        if (request.playerVehicleId() != null) {
+            targetVehicle = playerVehicleRepository.findByIdAndCharacterId(request.playerVehicleId(), character.getId())
+                    .orElse(null);
+        } else {
+            List<PlayerVehicle> owned = playerVehicleRepository.findByCharacterId(character.getId());
+            if (!owned.isEmpty()) {
+                targetVehicle = owned.get(0);
+            }
+        }
+
+        int clientFuel = Math.max(0, Math.min(100, request.currentFuelPercent()));
+        // Garde-fou serveur : empêcher un client modifié d'envoyer 98 % si le réservoir serveur est plus bas
+        int effectiveFuel = (targetVehicle != null && targetVehicle.getFuelLevel() != null)
+                ? Math.min(clientFuel, Math.max(0, Math.min(100, targetVehicle.getFuelLevel())))
+                : clientFuel;
+        int missing = 100 - effectiveFuel;
         if (missing <= 1) {
             return new RefuelResponse(100, 0L, wallet.getCashBalance(), wallet.getBankBalance(),
                     "Réservoir déjà plein à 100 % !");
@@ -133,19 +148,9 @@ public class VehicleService {
                     .metadata(Map.of("service", "IVOIRE_OIL_REFUEL", "missingPercent", missing))
                     .build());
 
-            if (request.playerVehicleId() != null) {
-                playerVehicleRepository.findByIdAndCharacterId(request.playerVehicleId(), character.getId())
-                        .ifPresent(pv -> {
-                            pv.setFuelLevel(100);
-                            playerVehicleRepository.save(pv);
-                        });
-            } else {
-                List<PlayerVehicle> owned = playerVehicleRepository.findByCharacterId(character.getId());
-                if (!owned.isEmpty()) {
-                    PlayerVehicle pv = owned.get(0);
-                    pv.setFuelLevel(100);
-                    playerVehicleRepository.save(pv);
-                }
+            if (targetVehicle != null) {
+                targetVehicle.setFuelLevel(100);
+                playerVehicleRepository.save(targetVehicle);
             }
         }
 

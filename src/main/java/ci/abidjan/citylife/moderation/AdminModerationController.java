@@ -48,4 +48,35 @@ public class AdminModerationController {
         String ip = httpRequest != null ? httpRequest.getRemoteAddr() : "unknown";
         return ResponseEntity.ok(moderationService.mutePlayer(authentication.getName(), id, request, ip));
     }
+
+    @PostMapping("/players/{id}/unmute")
+    public ResponseEntity<Map<String, Object>> unmutePlayer(
+            Authentication authentication,
+            @PathVariable UUID id,
+            HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest != null ? httpRequest.getRemoteAddr() : "unknown";
+        return ResponseEntity.ok(moderationService.unmutePlayer(authentication.getName(), id, ip));
+    }
+
+    @PostMapping("/players/{id}/ban")
+    public ResponseEntity<Map<String, Object>> banPlayer(
+            Authentication authentication,
+            @PathVariable UUID id,
+            @Valid @RequestBody BanPlayerRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest != null ? httpRequest.getRemoteAddr() : "unknown";
+        return ResponseEntity.ok(moderationService.banPlayer(authentication.getName(), id, request, ip));
+    }
+
+    @PostMapping("/players/{id}/unban")
+    public ResponseEntity<Map<String, Object>> unbanPlayer(
+            Authentication authentication,
+            @PathVariable UUID id,
+            HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest != null ? httpRequest.getRemoteAddr() : "unknown";
+        return ResponseEntity.ok(moderationService.unbanPlayer(authentication.getName(), id, ip));
+    }
 }

@@ -92,15 +92,30 @@ public class CharacterService {
         Character character = characterRepository.findByIdAndPlayerId(characterId, player.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Personnage introuvable ou accès refusé."));
 
+        // Garde-fous de cohérence serveur (Jalon 0) : bornes géographiques d'Abidjan
+        // et blocage des hausses gratuites de vitaux via save-state (hors /consume ou /hospital-care)
+        double safeX = clampDouble(request.posX(), -360.0, 240.0);
+        double safeY = clampDouble(request.posY(), -5.0, 120.0);
+        double safeZ = clampDouble(request.posZ(), -430.0, 310.0);
+
+        int prevHealth = character.getHealth() != null ? character.getHealth() : 100;
+        int prevHunger = character.getHunger() != null ? character.getHunger() : 100;
+        int prevThirst = character.getThirst() != null ? character.getThirst() : 100;
+
+        int safeHealth = Math.max(0, Math.min(prevHealth, request.health()));
+        int safeHunger = Math.max(0, Math.min(prevHunger, request.hunger()));
+        int safeThirst = Math.max(0, Math.min(prevThirst, request.thirst()));
+        int safeStamina = Math.max(0, Math.min(100, request.stamina()));
+
         character.setDistrict(request.district());
-        character.setPosX(request.posX());
-        character.setPosY(request.posY());
-        character.setPosZ(request.posZ());
+        character.setPosX(safeX);
+        character.setPosY(safeY);
+        character.setPosZ(safeZ);
         character.setRotationY(request.rotationY());
-        character.setHealth(request.health());
-        character.setStamina(request.stamina());
-        character.setHunger(request.hunger());
-        character.setThirst(request.thirst());
+        character.setHealth(safeHealth);
+        character.setStamina(safeStamina);
+        character.setHunger(safeHunger);
+        character.setThirst(safeThirst);
         character = characterRepository.save(character);
 
         CharacterAppearance a = appearanceRepository.findByCharacterId(character.getId()).orElseThrow();
@@ -192,6 +207,11 @@ public class CharacterService {
                 character.getHospitalVisits(),
                 msg
         );
+    }
+
+    private static double clampDouble(Double val, double min, double max) {
+        if (val == null || val.isNaN() || val.isInfinite()) return 0.0;
+        return Math.max(min, Math.min(max, val));
     }
 
     private Player getPlayerByEmail(String email) {

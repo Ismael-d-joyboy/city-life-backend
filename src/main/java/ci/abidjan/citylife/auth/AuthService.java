@@ -4,6 +4,7 @@ import ci.abidjan.citylife.player.Player;
 import ci.abidjan.citylife.player.PlayerProfile;
 import ci.abidjan.citylife.player.PlayerProfileRepository;
 import ci.abidjan.citylife.player.PlayerRepository;
+import ci.abidjan.citylife.security.AccountUserDetailsService;
 import ci.abidjan.citylife.security.JwtService;
 import ci.abidjan.citylife.security.SecurityAuditLog;
 import ci.abidjan.citylife.security.SecurityAuditService;
@@ -36,6 +37,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final SecurityAuditService auditService;
+    private final AccountUserDetailsService userDetailsService;
 
     @Value("${app.jwt.expiration-ms}")
     private long accessExpirationMs;
@@ -130,6 +132,36 @@ public class AuthService {
         return issueTokens(account, player, storedToken.getDeviceInfo(), ipAddress);
     }
 
+    /**
+     * Suppression définitive de compte exigée par Google Play Data Safety (Jalon 0).
+     * Exige le mot de passe actuel, consigne un audit anonyme et supprime le compte en cascade.
+     */
+    @Transactional
+    public Map<String, Object> deleteAccount(String email, DeleteAccountRequest request, String ipAddress) {
+        String cleanEmail = email.trim().toLowerCase();
+        Account account = accountRepository.findByEmail(cleanEmail)
+                .orElseThrow(() -> new IllegalStateException("Compte introuvable."));
+
+        if (!passwordEncoder.matches(request.password(), account.getPasswordHash())) {
+            auditService.log(account, "ACCOUNT_DELETE_WRONG_PASSWORD", SecurityAuditLog.Severity.WARNING, ipAddress,
+                    Map.of("reason", "Mot de passe incorrect"));
+            throw new IllegalArgumentException("Mot de passe incorrect. Suppression annulée.");
+        }
+
+        auditService.log(null, "ACCOUNT_DELETED_BY_USER", SecurityAuditLog.Severity.INFO, ipAddress,
+                Map.of("deletedAccountId", account.getId().toString()));
+
+        if (userDetailsService != null) {
+            userDetailsService.evictCache(cleanEmail);
+        }
+        accountRepository.delete(account);
+
+        return Map.of(
+                "deleted", true,
+                "message", "Votre compte et vos données de jeu ont été définitivement supprimés."
+        );
+    }
+
     private AuthResponse issueTokens(Account account, Player player, String deviceInfo, String ipAddress) {
         String accessToken = jwtService.generateAccessToken(account);
         String rawRefreshToken = generateSecureToken();
@@ -144,6 +176,10 @@ public class AuthService {
                 .build();
         refreshTokenRepository.save(refreshToken);
 
+        String mutedIso = (player.getMutedUntil() != null && player.getMutedUntil().isAfter(Instant.now()))
+                ? player.getMutedUntil().toString()
+                : null;
+
         return new AuthResponse(
                 accessToken,
                 rawRefreshToken,
@@ -152,7 +188,8 @@ public class AuthService {
                 account.getId(),
                 player.getId(),
                 player.getUsername(),
-                account.getRole().name()
+                account.getRole().name(),
+                mutedIso
         );
     }
 

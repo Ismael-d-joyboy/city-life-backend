@@ -52,6 +52,19 @@ public class Player {
     @Column(name = "mute_reason", length = 255)
     private String muteReason;
 
+    @Column(name = "peaceful_mode", nullable = false)
+    @Builder.Default
+    private boolean peacefulMode = false;
+
+    /**
+     * Recalcule le niveau joueur à partir de l'XP accumulé (palier progressif : 1 + floor(sqrt(xp / 100))).
+     */
+    public void recalculateLevel() {
+        long xp = this.experiencePoints != null ? Math.max(0L, this.experiencePoints) : 0L;
+        int computed = 1 + (int) Math.floor(Math.sqrt(xp / 100.0));
+        this.level = Math.max(1, computed);
+    }
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

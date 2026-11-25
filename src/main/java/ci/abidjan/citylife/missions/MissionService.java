@@ -93,6 +93,11 @@ public class MissionService {
                 .findByCharacterIdAndMissionIdAndStatus(character.getId(), mission.getId(), PlayerMission.Status.IN_PROGRESS)
                 .orElseThrow(() -> new IllegalStateException("Aucune mission en cours trouvée pour ce code."));
 
+        // Anti-triche : délai minimum 10 s entre démarrage et complétion d'une mission
+        if (pm.getStartedAt() != null && Instant.now().isBefore(pm.getStartedAt().plusSeconds(10L))) {
+            throw new IllegalStateException("Mission complétée trop rapidement. Patientez quelques secondes.");
+        }
+
         pm.setStatus(PlayerMission.Status.COMPLETED);
         pm.setCompletedAt(Instant.now());
         pm = playerMissionRepository.save(pm);
@@ -117,6 +122,7 @@ public class MissionService {
 
         if (mission.getRewardXp() > 0) {
             player.setExperiencePoints(player.getExperiencePoints() + mission.getRewardXp());
+            player.recalculateLevel();
             playerRepository.save(player);
         }
 

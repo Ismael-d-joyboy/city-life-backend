@@ -5,7 +5,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -34,6 +37,14 @@ public class AuthController {
             @Valid @RequestBody RefreshRequest request,
             HttpServletRequest httpRequest) {
         return ResponseEntity.ok(authService.refresh(request, extractClientIp(httpRequest)));
+    }
+
+    @DeleteMapping("/account")
+    public ResponseEntity<Map<String, Object>> deleteAccount(
+            Authentication authentication,
+            @Valid @RequestBody DeleteAccountRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.deleteAccount(authentication.getName(), request, extractClientIp(httpRequest)));
     }
 
     private String extractClientIp(HttpServletRequest request) {

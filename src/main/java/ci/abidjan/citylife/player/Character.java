@@ -20,7 +20,7 @@ public class Character {
     }
 
     public enum District {
-        PLATEAU, COCODY, TREICHVILLE, MARCORY, YOPOUGON, ABOBO, PORT_BOUET, BINGERVILLE
+        PLATEAU, COCODY, TREICHVILLE, MARCORY, ADJAME, YOPOUGON, ABOBO, PORT_BOUET, BINGERVILLE
     }
 
     @Id
@@ -97,6 +97,13 @@ public class Character {
     @Column(name = "total_fines_paid", nullable = false)
     @Builder.Default
     private Long totalFinesPaid = 0L;
+
+    @Column(name = "manawa_bag_streak", nullable = false)
+    @Builder.Default
+    private Integer manawaBagStreak = 0;
+
+    @Column(name = "last_job_payout_at")
+    private Instant lastJobPayoutAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

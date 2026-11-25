@@ -4,6 +4,7 @@ import ci.abidjan.citylife.auth.Account;
 import ci.abidjan.citylife.auth.AccountRepository;
 import ci.abidjan.citylife.player.Player;
 import ci.abidjan.citylife.player.PlayerRepository;
+import ci.abidjan.citylife.security.AccountUserDetailsService;
 import ci.abidjan.citylife.security.SecurityAuditLog;
 import ci.abidjan.citylife.security.SecurityAuditService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class ModerationService {
     private final PlayerRepository playerRepository;
     private final PlayerReportRepository reportRepository;
     private final SecurityAuditService auditService;
+    private final AccountUserDetailsService userDetailsService;
 
     @Transactional
     public ReportResponse createReport(String email, CreateReportRequest request, String ipAddress) {
@@ -109,6 +111,91 @@ public class ModerationService {
                 "mutedUntil", until.toString(),
                 "reason", target.getMuteReason(),
                 "message", "Joueur " + target.getUsername() + " mis en sourdine pour " + request.durationMinutes() + " min."
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> unmutePlayer(String moderatorEmail, UUID playerId, String ipAddress) {
+        Account modAccount = accountRepository.findByEmail(moderatorEmail)
+                .orElseThrow(() -> new IllegalStateException("Compte modérateur introuvable."));
+        Player target = playerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Joueur introuvable : " + playerId));
+
+        target.setMutedUntil(null);
+        target.setMuteReason(null);
+        playerRepository.save(target);
+
+        auditService.log(modAccount, "PLAYER_UNMUTED", SecurityAuditLog.Severity.INFO, ipAddress,
+                Map.of("targetPlayerId", target.getId().toString()));
+
+        return Map.of(
+                "playerId", target.getId().toString(),
+                "username", target.getUsername(),
+                "message", "Sourdine levée pour " + target.getUsername() + "."
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> banPlayer(String moderatorEmail, UUID playerId, BanPlayerRequest request, String ipAddress) {
+        Account modAccount = accountRepository.findByEmail(moderatorEmail)
+                .orElseThrow(() -> new IllegalStateException("Compte modérateur introuvable."));
+        Player target = playerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Joueur introuvable : " + playerId));
+
+        Account targetAccount = target.getAccount();
+        if (targetAccount == null) {
+            throw new IllegalStateException("Compte associé introuvable.");
+        }
+        if (targetAccount.getRole() == Account.Role.ADMIN) {
+            throw new IllegalStateException("Impossible de bannir un compte ADMIN.");
+        }
+
+        targetAccount.setStatus(Account.Status.BANNED);
+        targetAccount.setBanReason(request.reason().trim());
+        accountRepository.save(targetAccount);
+        if (userDetailsService != null) {
+            userDetailsService.evictCache(targetAccount.getEmail());
+        }
+
+        auditService.log(modAccount, "PLAYER_BANNED", SecurityAuditLog.Severity.CRITICAL, ipAddress,
+                Map.of("targetPlayerId", target.getId().toString(), "reason", targetAccount.getBanReason()));
+
+        return Map.of(
+                "playerId", target.getId().toString(),
+                "username", target.getUsername(),
+                "status", targetAccount.getStatus().name(),
+                "reason", targetAccount.getBanReason(),
+                "message", "Compte " + target.getUsername() + " banni."
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> unbanPlayer(String moderatorEmail, UUID playerId, String ipAddress) {
+        Account modAccount = accountRepository.findByEmail(moderatorEmail)
+                .orElseThrow(() -> new IllegalStateException("Compte modérateur introuvable."));
+        Player target = playerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Joueur introuvable : " + playerId));
+
+        Account targetAccount = target.getAccount();
+        if (targetAccount == null) {
+            throw new IllegalStateException("Compte associé introuvable.");
+        }
+
+        targetAccount.setStatus(Account.Status.ACTIVE);
+        targetAccount.setBanReason(null);
+        accountRepository.save(targetAccount);
+        if (userDetailsService != null) {
+            userDetailsService.evictCache(targetAccount.getEmail());
+        }
+
+        auditService.log(modAccount, "PLAYER_UNBANNED", SecurityAuditLog.Severity.INFO, ipAddress,
+                Map.of("targetPlayerId", target.getId().toString()));
+
+        return Map.of(
+                "playerId", target.getId().toString(),
+                "username", target.getUsername(),
+                "status", targetAccount.getStatus().name(),
+                "message", "Compte " + target.getUsername() + " débanni."
         );
     }
 }
